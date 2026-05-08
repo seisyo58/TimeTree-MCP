@@ -26,6 +26,10 @@ export const CreateEventInputSchema = z.object({
   note: z.string().optional().describe('Event notes/description'),
   location: z.string().optional().describe('Event location'),
   url: z.string().optional().describe('Related URL'),
+  checklist: z.array(z.object({
+    checked: z.boolean().default(false).describe('Whether the checklist item is checked'),
+    title: z.string().min(1).describe('Checklist item title'),
+  })).optional().describe('Checklist items to attach to the event'),
 });
 
 export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
@@ -94,6 +98,18 @@ export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
           type: 'string',
           description: 'Related URL',
         },
+        checklist: {
+          type: 'array',
+          description: 'Checklist items to attach to the event',
+          items: {
+            type: 'object',
+            properties: {
+              checked: { type: 'boolean', description: 'Whether the item is checked' },
+              title: { type: 'string', description: 'Checklist item title' },
+            },
+            required: ['title'],
+          },
+        },
       },
       required: ['calendar_id', 'title', 'start_at', 'end_at'],
     },
@@ -117,6 +133,9 @@ export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
           recurrences: [],
           alerts: [],
           file_uuids: [],
+          attachment: input.checklist
+            ? { checklist: input.checklist, virtual_user_attendees: [] }
+            : undefined,
         });
 
         // Format event for output
@@ -135,6 +154,7 @@ export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
           note: event.note || null,
           url: event.url || null,
           category: event.category || null,
+          checklist: event.attachment?.checklist || null,
           created_at: event.created_at ? new Date(event.created_at).toISOString() : null,
           updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null,
         };
@@ -257,6 +277,10 @@ export const UpdateEventInputSchema = z.object({
   note: z.string().optional().describe('New event notes'),
   location: z.string().optional().describe('New event location'),
   url: z.string().optional().describe('New related URL'),
+  checklist: z.array(z.object({
+    checked: z.boolean().default(false).describe('Whether the checklist item is checked'),
+    title: z.string().min(1).describe('Checklist item title'),
+  })).optional().describe('Replace the event checklist items'),
 });
 
 export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
@@ -326,6 +350,18 @@ export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
           type: 'string',
           description: 'New related URL',
         },
+        checklist: {
+          type: 'array',
+          description: 'Replace the event checklist items. Use [] to clear the checklist.',
+          items: {
+            type: 'object',
+            properties: {
+              checked: { type: 'boolean', description: 'Whether the item is checked' },
+              title: { type: 'string', description: 'Checklist item title' },
+            },
+            required: ['title'],
+          },
+        },
       },
       required: ['calendar_id', 'event_uuid'],
     },
@@ -352,6 +388,11 @@ export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
             note: input.note,
             location: input.location,
             url: input.url,
+            attachment: input.checklist === undefined
+              ? undefined
+              : input.checklist.length === 0
+                ? null
+                : { checklist: input.checklist },
           }
         );
 
@@ -371,6 +412,7 @@ export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
           note: event.note || null,
           url: event.url || null,
           category: event.category || null,
+          checklist: event.attachment?.checklist || null,
           updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null,
         };
 

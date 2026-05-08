@@ -104,6 +104,7 @@ export function createGetEventsTool(apiClient: TimeTreeAPIClient) {
           updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null,
           has_alerts: event.alerts && event.alerts.length > 0,
           has_recurrence: event.recurrences && event.recurrences.length > 0,
+          checklist: event.attachment?.checklist || null,
         }));
 
         const result = {
@@ -256,6 +257,7 @@ export function createGetUpdatedEventsTool(apiClient: TimeTreeAPIClient) {
           updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null,
           has_alerts: event.alerts && event.alerts.length > 0,
           has_recurrence: event.recurrences && event.recurrences.length > 0,
+          checklist: event.attachment?.checklist || null,
         }));
 
         const result = {

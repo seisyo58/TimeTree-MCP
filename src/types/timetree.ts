@@ -54,6 +54,12 @@ export const EventSchema = z.object({
   attendees: z.array(z.number()).optional(),
   recurrences: z.array(z.any()).optional(),
   alerts: z.array(z.any()).optional(),
+  attachment: z.object({
+    checklist: z.array(z.object({
+      checked: z.boolean().default(false),
+      title: z.string().min(1),
+    }).passthrough()).default([]),
+  }).passthrough().optional().nullable(),
   created_at: z.number().optional(),
   updated_at: z.number().optional(),
   // Allow additional fields but ignore them
@@ -110,7 +116,11 @@ export const CreateEventInputSchema = z.object({
   alerts: z.array(z.any()).default([]),
   file_uuids: z.array(z.string()).default([]),
   attachment: z.object({
-    url: z.string().url(),
+    url: z.string().url().optional(),
+    checklist: z.array(z.object({
+      checked: z.boolean().default(false),
+      title: z.string().min(1),
+    }).passthrough()).default([]),
     virtual_user_attendees: z.array(z.any()).default([]),
   }).optional(),
 }).passthrough();
@@ -138,9 +148,13 @@ export const UpdateEventInputSchema = z.object({
   alerts: z.array(z.any()).optional(),
   file_uuids: z.array(z.string()).optional(),
   attachment: z.object({
-    url: z.string().url(),
+    url: z.string().url().optional(),
+    checklist: z.array(z.object({
+      checked: z.boolean().default(false),
+      title: z.string().min(1),
+    }).passthrough()).optional(),
     virtual_user_attendees: z.array(z.any()).optional(),
-  }).optional(),
+  }).optional().nullable(),
 }).passthrough();
 
 export type UpdateEventInput = z.infer<typeof UpdateEventInputSchema>;
@@ -183,6 +197,10 @@ export const CreateEventToolInputSchema = z.object({
   note: z.string().optional(),
   location: z.string().optional(),
   url: z.string().optional(),
+  checklist: z.array(z.object({
+    checked: z.boolean().default(false),
+    title: z.string().min(1),
+  }).passthrough()).optional(),
 }).passthrough();
 
 export type CreateEventToolInput = z.infer<typeof CreateEventToolInputSchema>;
@@ -204,6 +222,10 @@ export const UpdateEventToolInputSchema = z.object({
   note: z.string().optional(),
   location: z.string().optional(),
   url: z.string().optional(),
+  checklist: z.array(z.object({
+    checked: z.boolean().default(false),
+    title: z.string().min(1),
+  }).passthrough()).optional(),
 }).passthrough();
 
 export type UpdateEventToolInput = z.infer<typeof UpdateEventToolInputSchema>;
