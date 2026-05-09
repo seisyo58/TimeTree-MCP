@@ -39,7 +39,8 @@ export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
       'Create a new event in a TimeTree calendar. Requires CSRF token (automatically managed). ' +
       'Returns the created event with UUID. ' +
       'Label colors (label_id 1-10): 1=Emerald green, 2=Modern cyan, 3=Deep sky blue, 4=Pastel brown, ' +
-      '5=Midnight black, 6=Apple red, 7=French rose, 8=Coral pink, 9=Bright orange, 10=Soft violet.',
+      '5=Midnight black, 6=Apple red, 7=French rose, 8=Coral pink, 9=Bright orange, 10=Soft violet. ' +
+      'Supports attaching checklist items.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -290,7 +291,8 @@ export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
       'Update an existing event in a TimeTree calendar. Only provide the fields you want to change. ' +
       'Requires CSRF token (automatically managed). Returns the updated event. ' +
       'Label colors (label_id 1-10): 1=Emerald green, 2=Modern cyan, 3=Deep sky blue, 4=Pastel brown, ' +
-      '5=Midnight black, 6=Apple red, 7=French rose, 8=Coral pink, 9=Bright orange, 10=Soft violet.',
+      '5=Midnight black, 6=Apple red, 7=French rose, 8=Coral pink, 9=Bright orange, 10=Soft violet. ' +
+      'Supports attaching checklist items.',
     inputSchema: {
       type: 'object',
       properties: {
