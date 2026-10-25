@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "LOG_LEVEL=ERROR tsx --test tests/*.test.ts"
   },
   "keywords": [
     "mcp",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^25.3.0",
     "tsup": "^8.3.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.7.2"
   },
   "engines": {

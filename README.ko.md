@@ -14,6 +14,7 @@ MCP 클라이언트(Claude Desktop, Claude Code, Codex, Antigravity, Cline, Curs
 
 - 📅 **캘린더 목록** - 모든 TimeTree 캘린더 가져오기
 - 📆 **이벤트 조회** - 자동 페이지네이션으로 캘린더 이벤트 조회
+- 🔁 **반복 일정** - `RRULE` / `EXDATE`를 반환하고, 날짜 범위를 지정하면 각 회차로 펼침
 - ➕ **이벤트 생성** - 캘린더에 새 이벤트 추가
 - ✏️ **이벤트 수정** - 기존 이벤트 수정
 - 🗑️ **이벤트 삭제** - 캘린더에서 이벤트 제거
@@ -117,7 +118,7 @@ npm run build
 ### MCP 도구
 
 - **list_calendars** - 참여 중인 사용자와 함께 모든 캘린더 조회
-- **get_events** - 자동 페이지네이션으로 캘린더 이벤트 조회
+- **get_events** - 자동 페이지네이션으로 캘린더 이벤트 조회. 반복 일정은 `RRULE`/`EXDATE`를 포함하고, `from`/`to`(기본 시간대 `Asia/Tokyo`) 또는 `end_before`로 그 기간의 각 회차를 펼칩니다
 - **get_updated_events** - 특정 시간 이후 업데이트된 이벤트 조회 (효율적인 증분 동기화)
 - **create_event** - 캘린더에 새 이벤트 생성
 - **update_event** - 기존 이벤트 수정
