@@ -14,6 +14,7 @@ An unofficial MCP (Model Context Protocol) server that allows MCP clients (Claud
 
 - 📅 **List Calendars** - Get all your TimeTree calendars
 - 📆 **Get Events** - Retrieve events from any calendar with automatic pagination
+- 🔁 **Recurring Events** - Return each series' `RRULE` / `EXDATE` lines, and expand occurrences for a date range
 - ➕ **Create Events** - Add new events to your calendars
 - ✏️ **Update Events** - Modify existing events
 - 🗑️ **Delete Events** - Remove events from your calendars
@@ -117,8 +118,34 @@ Then restart your MCP client.
 ### MCP Tools
 
 - **list_calendars** - List all calendars with participating users
-- **get_events** - Get events from a calendar with auto-pagination
-- **get_updated_events** - Get events updated after a specific timestamp (efficient incremental sync)
+- **get_events** - Get events from a calendar with auto-pagination. Repeating events include their `recurrences` lines. Pass `from`/`to` (or `end_before`) to expand them onto the dates they occur
+- **get_updated_events** - Get events updated after a specific timestamp (efficient incremental sync), including recurrence lines
+
+### Recurring events
+
+TimeTree stores a repeating event **once**. The repeat rule is the `recurrences` array of iCalendar lines, not a list of dates:
+
+```json
+["RRULE:FREQ=WEEKLY;BYDAY=MO,TH", "EXDATE:20261026"]
+```
+
+`EXDATE` is a deleted occurrence (`EXDATE:20261026` or `EXDATE:20261025T223000Z`). An edited occurrence is a separate event whose `recurring_uuid` points at the series. `get_events` and `get_updated_events` always return those fields.
+
+`get_events` expands a series into one row per occurrence only when you pass a range end:
+
+| Param | Meaning |
+| --- | --- |
+| `from`, `to` | Inclusive `YYYY-MM-DD` dates. Timezone defaults to `Asia/Tokyo`. `to` defaults to `from` (a single day). |
+| `end_before` | Exclusive Unix timestamp (ms). Use with the existing `start_after` for a raw instant window. |
+| `expand_recurring` | Defaults to `true` when a range end is set. `false` keeps one row per series. |
+
+`start_after` by itself does **not** expand. It still keeps a series only when the series' first `start_at` is after that instant.
+
+Timed events repeat at the same local time in `start_timezone`. All-day events are stored at UTC midnight and stay on that UTC date. A 07:30 Asia/Tokyo event is on the previous UTC date, so a calendar-day question should use `from`/`to` rather than UTC midnights.
+
+Example: 「燃やすごみ」 every Monday and Thursday at 07:30 JST, first start `2025-06-25T22:30:00Z` (`RRULE:FREQ=WEEKLY;BYDAY=MO,TH`). `from: "2026-10-26"` (Monday) returns one occurrence at `2026-10-25T22:30:00.000Z`. `from: "2026-10-26", to: "2026-10-29"` also returns Thursday `2026-10-28T22:30:00.000Z`.
+
+Supported rules are daily, weekly, monthly, and yearly, including intervals, `COUNT`, `UNTIL`, weekdays (`MO,TH` and ordinals such as `2TU,4TU`), month days, months, and `BYSETPOS`. Each series returns at most 500 occurrences per call.
 - **create_event** - Create a new event in a calendar
 - **update_event** - Update an existing event
 - **delete_event** - Delete an event from a calendar
@@ -131,6 +158,9 @@ Then restart your MCP client.
 # Build the project
 npm run build
 
+# Run unit tests
+npm test
+
 # Watch mode (auto-rebuild on changes)
 npm run dev
 ```
@@ -140,6 +170,7 @@ npm run dev
 - **Unofficial API**: May break if TimeTree changes their internal API
 - **Rate Limited**: 10 requests/second (with automatic retry for 429 errors)
 - **No Official Support**: TimeTree does not officially support this tool
+- **Recurrence expansion**: rules other than daily/weekly/monthly/yearly with the common `BYDAY` / `BYMONTHDAY` / `BYMONTH` / `BYSETPOS` parts are returned unexpanded (`recurrence_expanded: false`, or `unexpanded_series` when the series start is outside the window)
 - **CSRF Token Required**: Write operations require CSRF token (automatically extracted from TimeTree web page)
 
 ### Security

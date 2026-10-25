@@ -52,7 +52,11 @@ export const EventSchema = z.object({
   url: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
   attendees: z.array(z.number()).optional(),
+  // iCalendar lines from the TimeTree API, e.g. "RRULE:FREQ=WEEKLY;BYDAY=MO,TH"
+  // and "EXDATE:20261026" / "EXDATE:20261025T223000Z". Not expanded instances.
   recurrences: z.array(z.any()).optional(),
+  // Series uuid when this row is a detached occurrence (one date edited on its own).
+  recurring_uuid: z.string().nullable().optional(),
   alerts: z.array(z.any()).optional(),
   attachment: z.object({
     checklist: z.array(z.object({

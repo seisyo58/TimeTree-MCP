@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `get_events` and `get_updated_events` include each event's `recurrences` (TimeTree's `RRULE` / `EXDATE` / `RDATE` lines) and `recurring_uuid`
+- `get_events` accepts `from`/`to` (YYYY-MM-DD, default timezone `Asia/Tokyo`) or `end_before` to expand a recurring series into the occurrences in that window. `EXDATE` exceptions are skipped. Callers that do not pass a range end still receive one row per series
+
 ### Changed
 - Clarified that the documented `npx timetree-mcp` setup depends on a local `npm link` step rather than npm publish
 - Removed outdated contribution and feature-request wording to match current CRUD support
