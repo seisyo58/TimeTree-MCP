@@ -54,7 +54,7 @@ The row comes back at the Monday occurrence, not the original Thursday:
 }
 ```
 
-`2026-10-25T22:30:00Z` is 07:30 JST on Monday 2026-10-26. The example series lasts 10 minutes, so `end_at` is 10 minutes after the occurrence start. `from: "2026-10-26", to: "2026-10-29"` also includes Thursday 2026-10-29 (`2026-10-28T22:30:00.000Z`). A date-only `EXDATE:20261026` drops that Monday. All-day events stay at UTC midnight (`2026-10-26T00:00:00.000Z` for an all-day Monday). Monthly "2nd and 4th Tuesday" is `RRULE:FREQ=MONTHLY;BYDAY=2TU,4TU`.
+`2026-10-25T22:30:00Z` is 07:30 JST on Monday 2026-10-26. The example series lasts 10 minutes, so `end_at` is 10 minutes after the occurrence start. `from: "2026-10-26", to: "2026-10-29"` also includes Thursday 2026-10-29 (`2026-10-28T22:30:00.000Z`). A date-only `EXDATE:20261026` drops that Monday. All-day events match the UTC date (`2026-10-26T00:00:00.000Z` for `from: "2026-10-26"`), including when `timezone` is `America/Los_Angeles`. An `RDATE`-only series still includes its original start. Monthly "2nd and 4th Tuesday" is `RRULE:FREQ=MONTHLY;BYDAY=2TU,4TU`.
 
 ## Common Usage Patterns
 

@@ -63,6 +63,12 @@ export interface ResolvedRange {
   /** Null when the window is open on the left (no start_after and no from). */
   start_inclusive: string | null;
   end_exclusive: string;
+  /**
+   * UTC-midnight bounds used for all-day events when from/to is set.
+   * Timed events use start_inclusive/end_exclusive instead.
+   */
+  all_day_start_inclusive?: string;
+  all_day_end_exclusive?: string;
 }
 
 export interface UnexpandedSeries {
@@ -80,8 +86,16 @@ export interface Selection {
 }
 
 interface Window {
+  /** Instant bounds for timed events (from/to interpreted in `timezone`). */
   startInclusive: number;
   endExclusive: number;
+  /**
+   * UTC-date bounds for all-day events when from/to is set. All-day events are
+   * stored at UTC midnight, so a timezone west of UTC would otherwise move
+   * them onto the previous local day.
+   */
+  allDayStartInclusive?: number;
+  allDayEndExclusive?: number;
   range: ResolvedRange;
 }
 
@@ -94,7 +108,7 @@ export function selectEventRows(events: Event[], query: RangeQuery): Selection {
   if (!expand) {
     const rows: EventRow[] = [];
     for (const event of events) {
-      if (!includesInstant(event.start_at, query, window)) continue;
+      if (!includesStart(event.start_at, event.all_day, query, window)) continue;
       rows.push({ event, startAt: event.start_at, endAt: event.end_at, occurrence: false });
     }
     return { rows, expanded: false, range: window?.range, truncatedSeries: [], unexpandedSeries: [] };
@@ -113,7 +127,7 @@ export function selectEventRows(events: Event[], query: RangeQuery): Selection {
     const parsed = recurring ? parseRecurrence(event.recurrences) : null;
 
     if (!parsed) {
-      if (includesInstant(event.start_at, query, window)) {
+      if (includesStart(event.start_at, event.all_day, query, window)) {
         rows.push({
           event,
           startAt: event.start_at,
@@ -132,17 +146,18 @@ export function selectEventRows(events: Event[], query: RangeQuery): Selection {
     }
 
     const duration = event.end_at - event.start_at;
+    const bounds = boundsFor(event.all_day, window);
     const { occurrences, truncated } = expandRecurrence(parsed, {
       start: event.start_at,
       timeZone: occurrenceTimeZone(event),
       allDay: event.all_day,
-      windowStart: window.startInclusive,
-      windowEnd: window.endExclusive,
+      windowStart: bounds.startInclusive,
+      windowEnd: bounds.endExclusive,
       maxOccurrences: MAX_OCCURRENCES_PER_SERIES,
     });
 
     for (const startAt of occurrences) {
-      if (!includesInstant(startAt, query, window)) continue;
+      if (!includesStart(startAt, event.all_day, query, window)) continue;
       rows.push({
         event,
         startAt,
@@ -169,11 +184,20 @@ export function selectEventRows(events: Event[], query: RangeQuery): Selection {
   };
 }
 
-function includesInstant(start: number, query: RangeQuery, window: Window | undefined): boolean {
+/** Timed events use the zoned instant window. All-day events use UTC calendar dates. */
+function boundsFor(allDay: boolean, window: Window): { startInclusive: number; endExclusive: number } {
+  if (allDay && window.allDayStartInclusive !== undefined && window.allDayEndExclusive !== undefined) {
+    return { startInclusive: window.allDayStartInclusive, endExclusive: window.allDayEndExclusive };
+  }
+  return { startInclusive: window.startInclusive, endExclusive: window.endExclusive };
+}
+
+function includesStart(start: number, allDay: boolean, query: RangeQuery, window: Window | undefined): boolean {
   if (query.startAfter !== undefined && !(start > query.startAfter)) return false;
   if (!window) return true;
-  if (start < window.startInclusive) return false;
-  if (start >= window.endExclusive) return false;
+  const bounds = boundsFor(allDay, window);
+  if (start < bounds.startInclusive) return false;
+  if (start >= bounds.endExclusive) return false;
   return true;
 }
 
@@ -185,10 +209,12 @@ function resolveWindow(query: RangeQuery): Window {
     throw new InvalidRangeError('end_before must be a finite Unix timestamp in milliseconds.');
   }
 
-  // start_after stays exclusive and is applied by includesInstant. The expander
+  // start_after stays exclusive and is applied by includesStart. The expander
   // window is inclusive, so begin at start_after itself and drop the equal instant.
   let startInclusive = query.startAfter ?? Number.NEGATIVE_INFINITY;
   let endExclusive = query.endBefore ?? Number.POSITIVE_INFINITY;
+  let allDayStartInclusive: number | undefined;
+  let allDayEndExclusive: number | undefined;
   let from = query.from;
   let to = query.to;
   let timezone: string | undefined;
@@ -212,6 +238,12 @@ function resolveWindow(query: RangeQuery): Window {
     const toMs = zonedMidnightUtc(addCalendarDays(toDate, 1), timezone);
     startInclusive = Math.max(startInclusive, fromMs);
     endExclusive = Math.min(endExclusive, toMs);
+    // All-day rows are dated by the UTC calendar day, not by local midnight.
+    const allDayFromMs = Date.UTC(fromDate.year, fromDate.month - 1, fromDate.day);
+    const allDayToDate = addCalendarDays(toDate, 1);
+    const allDayToMs = Date.UTC(allDayToDate.year, allDayToDate.month - 1, allDayToDate.day);
+    allDayStartInclusive = query.startAfter !== undefined ? Math.max(allDayFromMs, query.startAfter) : allDayFromMs;
+    allDayEndExclusive = query.endBefore !== undefined ? Math.min(allDayToMs, query.endBefore) : allDayToMs;
   } else if (query.timezone !== undefined && query.timezone !== '' && !isValidTimeZone(query.timezone)) {
     throw new InvalidRangeError(`Unknown timezone "${query.timezone}". Use an IANA name such as Asia/Tokyo.`);
   }
@@ -223,6 +255,9 @@ function resolveWindow(query: RangeQuery): Window {
   return {
     startInclusive,
     endExclusive,
+    ...(allDayStartInclusive !== undefined && allDayEndExclusive !== undefined
+      ? { allDayStartInclusive, allDayEndExclusive }
+      : {}),
     range: {
       ...(timezone ? { timezone } : {}),
       ...(from ? { from } : {}),
@@ -231,6 +266,12 @@ function resolveWindow(query: RangeQuery): Window {
       ...(query.endBefore !== undefined ? { end_before: new Date(query.endBefore).toISOString() } : {}),
       start_inclusive: Number.isFinite(startInclusive) ? new Date(startInclusive).toISOString() : null,
       end_exclusive: new Date(endExclusive).toISOString(),
+      ...(allDayStartInclusive !== undefined && allDayEndExclusive !== undefined
+        ? {
+            all_day_start_inclusive: new Date(allDayStartInclusive).toISOString(),
+            all_day_end_exclusive: new Date(allDayEndExclusive).toISOString(),
+          }
+        : {}),
     },
   };
 }

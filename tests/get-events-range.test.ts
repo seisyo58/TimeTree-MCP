@@ -278,6 +278,112 @@ describe('get_events recurrence output', () => {
     assert.equal(body.error, 'Invalid calendar');
   });
 
+  it('matches all-day events to the UTC date when timezone is west of UTC', async () => {
+    const daily = event({
+      uuid: 'all-day-daily',
+      title: '終日',
+      all_day: true,
+      start_timezone: 'UTC',
+      end_timezone: 'UTC',
+      start_at: Date.parse('2026-10-25T00:00:00.000Z'),
+      end_at: Date.parse('2026-10-25T00:00:00.000Z'),
+      recurrences: ['RRULE:FREQ=DAILY'],
+    });
+    const onTheDate = event({
+      uuid: 'all-day-once',
+      title: '終日の単発',
+      all_day: true,
+      start_timezone: 'UTC',
+      end_timezone: 'UTC',
+      start_at: Date.parse('2026-10-26T00:00:00.000Z'),
+      end_at: Date.parse('2026-10-26T00:00:00.000Z'),
+    });
+    const morning = event({
+      uuid: 'la-morning',
+      title: '朝の予定',
+      start_timezone: 'America/Los_Angeles',
+      end_timezone: 'America/Los_Angeles',
+      start_at: Date.parse('2026-10-26T16:00:00.000Z'),
+      end_at: Date.parse('2026-10-26T17:00:00.000Z'),
+    });
+    const previousEvening = event({
+      uuid: 'la-previous-evening',
+      title: '前日の夜',
+      start_timezone: 'America/Los_Angeles',
+      end_timezone: 'America/Los_Angeles',
+      start_at: Date.parse('2026-10-26T05:00:00.000Z'),
+      end_at: Date.parse('2026-10-26T06:00:00.000Z'),
+    });
+    const tool = createGetEventsTool(client([daily, onTheDate, morning, previousEvening]));
+    const { body } = await call(tool, {
+      calendar_id: '42',
+      from: '2026-10-26',
+      timezone: 'America/Los_Angeles',
+    });
+    const events = body.events as Array<Record<string, unknown>>;
+    const range = body.range as Record<string, unknown>;
+
+    assert.equal(range.start_inclusive, '2026-10-26T07:00:00.000Z');
+    assert.equal(range.end_exclusive, '2026-10-27T07:00:00.000Z');
+    assert.equal(range.all_day_start_inclusive, '2026-10-26T00:00:00.000Z');
+    assert.equal(range.all_day_end_exclusive, '2026-10-27T00:00:00.000Z');
+    assert.deepEqual(
+      events.map((row) => [row.uuid, row.start_at]),
+      [
+        ['all-day-daily', '2026-10-26T00:00:00.000Z'],
+        ['all-day-once', '2026-10-26T00:00:00.000Z'],
+        ['la-morning', '2026-10-26T16:00:00.000Z'],
+      ]
+    );
+  });
+
+  it('still filters an all-day series start on the UTC date when expansion is off', async () => {
+    const holiday = event({
+      uuid: 'holiday',
+      title: '祝日',
+      all_day: true,
+      start_timezone: 'UTC',
+      start_at: Date.parse('2026-10-26T00:00:00.000Z'),
+      end_at: Date.parse('2026-10-26T00:00:00.000Z'),
+      recurrences: ['RRULE:FREQ=DAILY'],
+    });
+    const tool = createGetEventsTool(client([holiday]));
+    const { body } = await call(tool, {
+      calendar_id: '42',
+      from: '2026-10-26',
+      timezone: 'America/Los_Angeles',
+      expand_recurring: false,
+    });
+    const events = body.events as Array<Record<string, unknown>>;
+    assert.equal(body.expanded_recurring, false);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]!.start_at, '2026-10-26T00:00:00.000Z');
+    assert.equal(events[0]!.is_recurring_occurrence, undefined);
+  });
+
+  it('includes the original start of an RDATE-only series', async () => {
+    const lunar = event({
+      uuid: 'lunar',
+      title: '旧暦',
+      all_day: true,
+      start_timezone: 'UTC',
+      start_at: Date.parse('2026-06-01T00:00:00.000Z'),
+      end_at: Date.parse('2026-06-01T00:00:00.000Z'),
+      recurrences: ['RDATE:20270601'],
+    });
+    const tool = createGetEventsTool(client([lunar]));
+    const first = await call(tool, { calendar_id: '42', from: '2026-06-01', timezone: 'UTC' });
+    const later = await call(tool, { calendar_id: '42', from: '2027-06-01', timezone: 'UTC' });
+    assert.deepEqual(
+      (first.body.events as Array<Record<string, unknown>>).map((row) => row.start_at),
+      ['2026-06-01T00:00:00.000Z']
+    );
+    assert.deepEqual(
+      (later.body.events as Array<Record<string, unknown>>).map((row) => row.start_at),
+      ['2027-06-01T00:00:00.000Z']
+    );
+  });
+
   it('advertises the range parameters on the tool schema', () => {
     const tool = createGetEventsTool(client([]));
     const properties = (tool.inputSchema as { properties: Record<string, unknown> }).properties;

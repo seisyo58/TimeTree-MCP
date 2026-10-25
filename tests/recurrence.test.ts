@@ -243,6 +243,40 @@ describe('bounds', () => {
     ]);
   });
 
+  it('keeps the series start of an RDATE-only series and dedupes it', () => {
+    const added = expand(
+      ['RDATE:20270601'],
+      '2026-06-01T00:00:00.000Z',
+      '2026-01-01T00:00:00.000Z',
+      '2028-01-01T00:00:00.000Z',
+      { allDay: true, timeZone: 'UTC' }
+    );
+    assert.deepEqual(added.occurrences.map((instant) => new Date(instant).toISOString()), [
+      '2026-06-01T00:00:00.000Z',
+      '2027-06-01T00:00:00.000Z',
+    ]);
+
+    const duplicated = expand(
+      ['RDATE:20260601,20270601'],
+      '2026-06-01T00:00:00.000Z',
+      '2026-01-01T00:00:00.000Z',
+      '2028-01-01T00:00:00.000Z',
+      { allDay: true, timeZone: 'UTC' }
+    );
+    assert.deepEqual(duplicated.occurrences, added.occurrences);
+
+    const excludedStart = expand(
+      ['RDATE:20270601', 'EXDATE:20260601'],
+      '2026-06-01T00:00:00.000Z',
+      '2026-01-01T00:00:00.000Z',
+      '2028-01-01T00:00:00.000Z',
+      { allDay: true, timeZone: 'UTC' }
+    );
+    assert.deepEqual(excludedStart.occurrences.map((instant) => new Date(instant).toISOString()), [
+      '2027-06-01T00:00:00.000Z',
+    ]);
+  });
+
   it('reports truncation once the per-series cap is hit', () => {
     const { occurrences, truncated } = expand(
       ['RRULE:FREQ=DAILY'],

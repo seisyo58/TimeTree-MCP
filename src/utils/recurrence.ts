@@ -214,17 +214,25 @@ export function expandRecurrence(recurrence: ParsedRecurrence, options: ExpandOp
   if (recurrence.rule) {
     const generated = expandRule(recurrence, options, formatter, occurrences);
     truncated = generated.truncated;
+  } else {
+    // RDATE adds dates on top of the series start. An RDATE-only list does not
+    // replace DTSTART, even when the start instant is absent from the list.
+    const nominal = toLocal(options.start, formatter);
+    const inWindow = options.start >= options.windowStart && options.start < options.windowEnd;
+    if (inWindow && !isExcluded(recurrence.exdates, options.start, nominal, formatter)) {
+      occurrences.push(options.start);
+    }
   }
 
   for (const token of recurrence.rdates) {
-    if (occurrences.length >= options.maxOccurrences) {
-      truncated = true;
-      break;
-    }
     const instant = tokenToInstant(token, options, formatter);
     if (instant === null) continue;
     if (instant < options.windowStart || instant >= options.windowEnd) continue;
     if (isExcluded(recurrence.exdates, instant, toLocal(instant, formatter), formatter)) continue;
+    if (occurrences.length >= options.maxOccurrences) {
+      truncated = true;
+      break;
+    }
     occurrences.push(instant);
   }
 

@@ -60,8 +60,8 @@ export const GetEventsInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      'IANA timezone used to interpret `from`/`to`. Defaults to Asia/Tokyo. ' +
-        'Each timed event still repeats in its own start_timezone. All-day events stay on their UTC date.'
+      'IANA timezone used to interpret `from`/`to` for timed events. Defaults to Asia/Tokyo. ' +
+        'All-day events match the UTC calendar date of from/to instead of that local window.'
     ),
   expand_recurring: z
     .boolean()
@@ -192,7 +192,8 @@ export function createGetEventsTool(apiClient: TimeTreeAPIClient) {
       'Pass from and to as YYYY-MM-DD dates (timezone defaults to Asia/Tokyo; a single from is that one day) ' +
       'or end_before (Unix ms, exclusive) to expand each series into the occurrences in the window. ' +
       'EXDATE and comma-separated exception lists are skipped. Timed events repeat at the same local time in ' +
-      'start_timezone. All-day events are stored at UTC midnight and stay on that UTC date. ' +
+      'start_timezone. All-day events are stored at UTC midnight and match the UTC calendar date of from/to, ' +
+      'so a timezone west of UTC does not move them onto the previous local day. ' +
       'Example: 燃やすごみ every Mon/Thu at 07:30 Asia/Tokyo, series start 2025-06-25T22:30:00Z, ' +
       'from "2026-10-26" to "2026-10-26" returns the Monday occurrence at 2026-10-25T22:30:00Z. ' +
       'Occurrences share the series uuid. Each series is capped at ' +
@@ -238,8 +239,8 @@ export function createGetEventsTool(apiClient: TimeTreeAPIClient) {
           type: 'string',
           description:
             `IANA timezone for from/to. Defaults to ${DEFAULT_RANGE_TIMEZONE}. ` +
-            'Does not override an event\'s start_timezone. All-day events are matched on their UTC date, ' +
-            'which still falls inside the Asia/Tokyo calendar day (UTC midnight is 09:00 JST the same date).',
+            'Does not override an event\'s start_timezone. All-day events match the UTC calendar date of from/to ' +
+            '(2026-10-26T00:00:00Z for "2026-10-26"), including when timezone is west of UTC.',
         },
         expand_recurring: {
           type: 'boolean',

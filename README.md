@@ -141,7 +141,7 @@ TimeTree stores a repeating event **once**. The repeat rule is the `recurrences`
 
 `start_after` by itself does **not** expand. It still keeps a series only when the series' first `start_at` is after that instant.
 
-Timed events repeat at the same local time in `start_timezone`. All-day events are stored at UTC midnight and stay on that UTC date. A 07:30 Asia/Tokyo event is on the previous UTC date, so a calendar-day question should use `from`/`to` rather than UTC midnights.
+Timed events repeat at the same local time in `start_timezone`. All-day events are stored at UTC midnight and match the UTC calendar date of `from`/`to`, including when `timezone` is west of UTC. A 07:30 Asia/Tokyo event is on the previous UTC date, so a calendar-day question should use `from`/`to`.
 
 Example: 「燃やすごみ」 every Monday and Thursday at 07:30 JST, first start `2025-06-25T22:30:00Z` (`RRULE:FREQ=WEEKLY;BYDAY=MO,TH`). `from: "2026-10-26"` (Monday) returns one occurrence at `2026-10-25T22:30:00.000Z`. `from: "2026-10-26", to: "2026-10-29"` also returns Thursday `2026-10-28T22:30:00.000Z`.
 
