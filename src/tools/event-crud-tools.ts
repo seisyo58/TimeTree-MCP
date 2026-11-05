@@ -228,7 +228,7 @@ export function createCreateEventTool(apiClient: TimeTreeAPIClient) {
                   {
                     error: 'Invalid input',
                     message: 'Please provide valid event data',
-                    details: (error as any).errors,
+                    details: (error as any).issues,
                   },
                   null,
                   2
@@ -486,7 +486,7 @@ export function createUpdateEventTool(apiClient: TimeTreeAPIClient) {
                   {
                     error: 'Invalid input',
                     message: 'Please provide valid update data',
-                    details: (error as any).errors,
+                    details: (error as any).issues,
                   },
                   null,
                   2
@@ -625,7 +625,7 @@ export function createDeleteEventTool(apiClient: TimeTreeAPIClient) {
                   {
                     error: 'Invalid input',
                     message: 'Please provide valid calendar_id and event_uuid',
-                    details: (error as any).errors,
+                    details: (error as any).issues,
                   },
                   null,
                   2

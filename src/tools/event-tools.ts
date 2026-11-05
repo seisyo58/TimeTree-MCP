@@ -151,7 +151,7 @@ function zodErrorResult(message: string, error: unknown) {
           {
             error: 'Invalid input',
             message,
-            details: (error as { errors?: unknown }).errors,
+            details: (error as { issues?: unknown }).issues,
           },
           null,
           2
